@@ -12,7 +12,6 @@
   let maxSize = 100;
   let sizeValue = 5;
   let erase: boolean = false;
-  let imageData: ImageData | null = null;
 
   function toggleErase() {
     erase = !erase;
@@ -25,6 +24,7 @@
 
   function clear() {
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    localStorage.removeItem("canvasData");
   }
 
   function startDrawing(event: MouseEvent) {
@@ -51,6 +51,8 @@
     ctx.lineTo(event.clientX, event.clientY);
     ctx.stroke();
     [lastX, lastY] = [event.clientX, event.clientY];
+
+    saveCanvasToLocalStorage();
   }
 
   function stopDrawing() {
@@ -66,19 +68,38 @@
   }
 
   function resizeCanvas() {
-    if (ctx) {
-      imageData = ctx.getImageData(0, 0, canvas.width, canvas.height); // Save current drawing
-    }
+    const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
     if (ctx && imageData) {
-      ctx.putImageData(imageData, 0, 0); // Restore drawing
+      ctx.putImageData(imageData, 0, 0);
+    }
+  }
+
+  function saveCanvasToLocalStorage() {
+    if (canvas) {
+      const canvasData = canvas.toDataURL();
+      localStorage.setItem("canvasData", canvasData);
+    }
+  }
+
+  function loadCanvasFromLocalStorage() {
+    const savedData = localStorage.getItem("canvasData");
+    if (savedData && ctx) {
+      const image = new Image();
+      image.src = savedData;
+      image.onload = () => {
+        ctx?.drawImage(image, 0, 0);
+      };
     }
   }
 
   onMount(() => {
-    resizeCanvas();
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
     ctx = canvas.getContext("2d");
+    
+    loadCanvasFromLocalStorage();
 
     window.addEventListener("resize", resizeCanvas);
   });
@@ -87,6 +108,7 @@
     window.removeEventListener("resize", resizeCanvas);
   });
 </script>
+
 
 <main>
   <canvas
