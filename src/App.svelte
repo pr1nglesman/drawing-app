@@ -4,35 +4,35 @@
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null;
 
-  let isDrawing = false;
-  let lastX = 0;
-  let lastY = 0;
-  let color = "#FFFFFF";
-  let minSize = 1;
-  let maxSize = 100;
-  let sizeValue = 5;
+  let isDrawing: boolean = false;
+  let lastX: number = 0;
+  let lastY: number = 0;
+  let color: string = "#FFFFFF";
+  let minSize: number = 1;
+  let maxSize: number = 100;
+  let sizeValue: number = 5;
   let erase: boolean = false;
 
-  function toggleErase() {
+  function toggleErase(): void {
     erase = !erase;
   }
 
-  function chooseColor(event: Event) {
+  function chooseColor(event: Event): void {
     const target = event.target as HTMLInputElement;
     color = target.value;
   }
 
-  function clear() {
+  function clear(): void {
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
     localStorage.removeItem("canvasData");
   }
 
-  function startDrawing(event: MouseEvent) {
+  function startDrawing(event: MouseEvent): void {
     isDrawing = true;
     [lastX, lastY] = [event.clientX, event.clientY];
   }
 
-  function draw(event: MouseEvent) {
+  function draw(event: MouseEvent): void {
     if (!isDrawing || !ctx) return;
 
     if (erase) {
@@ -55,11 +55,11 @@
     saveCanvasToLocalStorage();
   }
 
-  function stopDrawing() {
+  function stopDrawing(): void {
     isDrawing = false;
   }
 
-  function saveDrawing() {
+  function saveDrawing(): void {
     if (!canvas) return;
     const link = document.createElement("a");
     link.href = canvas.toDataURL("image/png");
@@ -67,7 +67,7 @@
     link.click();
   }
 
-  function resizeCanvas() {
+  function resizeCanvas(): void {
     const imageData = ctx?.getImageData(0, 0, canvas.width, canvas.height);
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -76,17 +76,17 @@
     }
   }
 
-  function saveCanvasToLocalStorage() {
+  function saveCanvasToLocalStorage(): void {
     if (canvas) {
       const canvasData = canvas.toDataURL();
       localStorage.setItem("canvasData", canvasData);
     }
   }
 
-  function loadCanvasFromLocalStorage() {
+  function loadCanvasFromLocalStorage(): void {
     const savedData = localStorage.getItem("canvasData");
     if (savedData && ctx) {
-      const image = new Image();
+      const image: HTMLImageElement = new Image();
       image.src = savedData;
       image.onload = () => {
         ctx?.drawImage(image, 0, 0);
