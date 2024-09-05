@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
 
   let canvas: HTMLCanvasElement;
   let ctx: CanvasRenderingContext2D | null;
@@ -12,6 +12,7 @@
   let maxSize = 100;
   let sizeValue = 5;
   let erase: boolean = false;
+  let imageData: ImageData | null = null;
 
   function toggleErase() {
     erase = !erase;
@@ -28,29 +29,29 @@
 
   function startDrawing(event: MouseEvent) {
     isDrawing = true;
-    [lastX, lastY] = [event.offsetX, event.offsetY];
+    [lastX, lastY] = [event.clientX, event.clientY];
   }
 
   function draw(event: MouseEvent) {
-  if (!isDrawing || !ctx) return;
+    if (!isDrawing || !ctx) return;
 
-  if (erase) {
-    ctx.globalCompositeOperation = 'destination-out';
-  } else {
-    ctx.globalCompositeOperation = 'source-over';
+    if (erase) {
+      ctx.globalCompositeOperation = 'destination-out';
+    } else {
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = sizeValue;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    ctx.beginPath();
+    ctx.moveTo(lastX, lastY);
+    ctx.lineTo(event.clientX, event.clientY);
+    ctx.stroke();
+    [lastX, lastY] = [event.clientX, event.clientY];
   }
-
-  ctx.strokeStyle = color;
-  ctx.lineWidth = sizeValue;
-  ctx.lineJoin = "round";
-  ctx.lineCap = "round";
-
-  ctx.beginPath();
-  ctx.moveTo(lastX, lastY);
-  ctx.lineTo(event.offsetX, event.offsetY);
-  ctx.stroke();
-  [lastX, lastY] = [event.offsetX, event.offsetY];
-}
 
   function stopDrawing() {
     isDrawing = false;
@@ -64,10 +65,26 @@
     link.click();
   }
 
-  onMount(() => {
+  function resizeCanvas() {
+    if (ctx) {
+      imageData = ctx.getImageData(0, 0, canvas.width, canvas.height); // Save current drawing
+    }
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
+    if (ctx && imageData) {
+      ctx.putImageData(imageData, 0, 0); // Restore drawing
+    }
+  }
+
+  onMount(() => {
+    resizeCanvas();
     ctx = canvas.getContext("2d");
+
+    window.addEventListener("resize", resizeCanvas);
+  });
+
+  onDestroy(() => {
+    window.removeEventListener("resize", resizeCanvas);
   });
 </script>
 
@@ -169,7 +186,6 @@
     background-color: gray;
     width: 75px;
     height: 25px;
-    font-family: monospace;
   }
 
   #save-btn {
