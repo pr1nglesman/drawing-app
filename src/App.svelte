@@ -35,11 +35,11 @@
   function draw(event: MouseEvent): void {
     if (!isDrawing || !ctx) return;
 
-    if (erase) {
-      ctx.globalCompositeOperation = 'destination-out';
-    } else {
-      ctx.globalCompositeOperation = 'source-over';
-    }
+    erase 
+      ? 
+      ctx.globalCompositeOperation = 'destination-out' 
+      : 
+      ctx.globalCompositeOperation = 'source-over'
 
     ctx.strokeStyle = color;
     ctx.lineWidth = sizeValue;
