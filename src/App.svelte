@@ -12,9 +12,14 @@
   let maxSize: number = 100;
   let sizeValue: number = 5;
   let erase: boolean = false;
+  let fillMode: boolean = false; // New variable to toggle fill mode
 
   function toggleErase(): void {
     erase = !erase;
+  }
+
+  function toggleFill(): void {
+    fillMode = !fillMode; // Toggle fill mode on and off
   }
 
   function chooseColor(event: Event): void {
@@ -28,18 +33,18 @@
   }
 
   function startDrawing(event: MouseEvent): void {
-    isDrawing = true;
-    [lastX, lastY] = [event.clientX, event.clientY];
+    if (!fillMode) {
+      isDrawing = true;
+      [lastX, lastY] = [event.clientX, event.clientY];
+    }
   }
 
   function draw(event: MouseEvent): void {
-    if (!isDrawing || !ctx) return;
+    if (!isDrawing || !ctx || fillMode) return;
 
     erase 
-      ? 
-      ctx.globalCompositeOperation = 'destination-out' 
-      : 
-      ctx.globalCompositeOperation = 'source-over'
+      ? ctx.globalCompositeOperation = 'destination-out' 
+      : ctx.globalCompositeOperation = 'source-over';
 
     ctx.strokeStyle = color;
     ctx.lineWidth = sizeValue;
@@ -94,6 +99,64 @@
     }
   }
 
+  function fill(event: MouseEvent): void {
+    if (!ctx || !canvas || !fillMode) return;
+
+    const fillColor = hexToRgb(color);
+    const [startX, startY] = [event.clientX, event.clientY];
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const data = imageData.data;
+    const targetColor = getColorAtPixel(data, startX, startY);
+
+    if (!colorsMatch(fillColor, targetColor)) {
+      floodFill(startX, startY, fillColor, targetColor, imageData);
+      ctx.putImageData(imageData, 0, 0);
+      saveCanvasToLocalStorage();
+    }
+  }
+
+  function floodFill(x: number, y: number, fillColor: number[], targetColor: number[], imageData: ImageData): void {
+    const stack = [[x, y]];
+    const width = imageData.width;
+    const data = imageData.data;
+
+    while (stack.length) {
+      const [curX, curY] = stack.pop()!;
+      const index = (curY * width + curX) * 4;
+
+      if (colorsMatch(getColorAtPixel(data, curX, curY), targetColor)) {
+        setColorAtPixel(data, curX, curY, fillColor);
+
+        if (curX > 0) stack.push([curX - 1, curY]);
+        if (curX < width - 1) stack.push([curX + 1, curY]);
+        if (curY > 0) stack.push([curX, curY - 1]);
+        if (curY < imageData.height - 1) stack.push([curX, curY + 1]);
+      }
+    }
+  }
+
+  function getColorAtPixel(data: Uint8ClampedArray, x: number, y: number): number[] {
+    const index = (y * canvas.width + x) * 4;
+    return [data[index], data[index + 1], data[index + 2], data[index + 3]];
+  }
+
+  function setColorAtPixel(data: Uint8ClampedArray, x: number, y: number, color: number[]): void {
+    const index = (y * canvas.width + x) * 4;
+    data[index] = color[0];
+    data[index + 1] = color[1];
+    data[index + 2] = color[2];
+    data[index + 3] = 255;
+  }
+
+  function colorsMatch(a: number[], b: number[]): boolean {
+    return a[0] === b[0] && a[1] === b[1] && a[2] === b[2] && a[3] === b[3];
+  }
+
+  function hexToRgb(hex: string): number[] {
+    const bigint = parseInt(hex.slice(1), 16);
+    return [(bigint >> 16) & 255, (bigint >> 8) & 255, bigint & 255, 255];
+  }
+
   onMount(() => {
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
@@ -109,11 +172,10 @@
   });
 </script>
 
-
 <main>
   <canvas
     bind:this={canvas}
-    on:mousedown={startDrawing}
+    on:mousedown={fillMode ? fill : startDrawing}
     on:mousemove={draw}
     on:mouseup={stopDrawing}
     on:mouseout={stopDrawing}
@@ -135,10 +197,13 @@
     max={maxSize}
     bind:value={sizeValue}
   />
-  <button on:click={toggleErase} id="erase-btn"
-    >Erase: {erase ? "on" : "off"}
-    </button>
-    <button id="save-btn" on:click={saveDrawing}>Save as Image</button>
+  <button on:click={toggleErase} id="erase-btn">
+    Erase: {erase ? "on" : "off"}
+  </button>
+  <button id="fill-btn" on:click={toggleFill}>
+    Fill: {fillMode ? "on" : "off"}
+  </button>
+  <button id="save-btn" on:click={saveDrawing}>Save as Image</button>
 </main>
 
 <style>
@@ -187,11 +252,13 @@
     transition: 0.5s ease;
     font-family: Consolas;
   }
+
   #line-range {
     position: absolute;
     left: 10px;
     bottom: 10px;
   }
+
   #range-text {
     position: absolute;
     left: 10px;
@@ -208,6 +275,16 @@
     background-color: gray;
     width: 75px;
     height: 25px;
+  }
+
+  #fill-btn {
+    position: absolute;
+    top: 200px;
+    left: 10px;
+    background-color: gray;
+    width: 75px;
+    height: 25px;
+    color: white;
   }
 
   #save-btn {
