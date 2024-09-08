@@ -12,14 +12,17 @@
   let maxSize: number = 100;
   let sizeValue: number = 5;
   let erase: boolean = false;
-  let fillMode: boolean = false; // New variable to toggle fill mode
+  let fillMode: boolean = false;
+  
+  let history: string[] = [];  // Array to store canvas states
+  let undoEnabled: boolean = false;  // Disable undo button if no history
 
   function toggleErase(): void {
     erase = !erase;
   }
 
   function toggleFill(): void {
-    fillMode = !fillMode; // Toggle fill mode on and off
+    fillMode = !fillMode;
   }
 
   function chooseColor(event: Event): void {
@@ -29,11 +32,15 @@
 
   function clear(): void {
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    saveCanvasToLocalStorage();
     localStorage.removeItem("canvasData");
+    history = [];  // Clear history when canvas is cleared
+    undoEnabled = false;  // Disable undo when no history exists
   }
 
   function startDrawing(event: MouseEvent): void {
     if (!fillMode) {
+      saveHistory();  // Save canvas state before any drawing happens
       isDrawing = true;
       [lastX, lastY] = [event.clientX, event.clientY];
     }
@@ -99,8 +106,35 @@
     }
   }
 
+  function saveHistory(): void {
+    if (canvas && ctx) {
+      const canvasData = canvas.toDataURL();
+      history.push(canvasData);  // Save the current canvas state
+      undoEnabled = true;  // Enable the undo button
+    }
+  }
+
+  function undo(): void {
+    if (history.length === 0 || !ctx) return;
+
+    // Remove the latest state from history
+    const previousState = history.pop();
+    undoEnabled = history.length > 0;  // Disable undo if no more history
+
+    if (previousState) {
+      const image = new Image();
+      image.src = previousState;
+      image.onload = () => {
+        ctx?.clearRect(0, 0, canvas.width, canvas.height);
+        ctx?.drawImage(image, 0, 0);  // Restore the previous canvas state
+        saveCanvasToLocalStorage();
+      };
+    }
+  }
+
   function fill(event: MouseEvent): void {
     if (!ctx || !canvas || !fillMode) return;
+    saveHistory();  // Save history before fill action
 
     const fillColor = hexToRgb(color);
     const [startX, startY] = [event.clientX, event.clientY];
@@ -115,6 +149,7 @@
     }
   }
 
+  // Helper functions for fill logic...
   function floodFill(x: number, y: number, fillColor: number[], targetColor: number[], imageData: ImageData): void {
     const stack = [[x, y]];
     const width = imageData.width;
@@ -145,7 +180,7 @@
     data[index] = color[0];
     data[index + 1] = color[1];
     data[index + 2] = color[2];
-    data[index + 3] = 255;
+    data[index + 3] = 255; // Full opacity
   }
 
   function colorsMatch(a: number[], b: number[]): boolean {
@@ -200,8 +235,11 @@
   <button on:click={toggleErase} id="erase-btn">
     Erase: {erase ? "on" : "off"}
   </button>
-  <button id="fill-btn" on:click={toggleFill}>
+  <button on:click={toggleFill} id="fill-btn">
     Fill: {fillMode ? "on" : "off"}
+  </button>
+  <button on:click={undo} id="undo-btn" disabled={!undoEnabled}>
+    Undo
   </button>
   <button id="save-btn" on:click={saveDrawing}>Save as Image</button>
 </main>
@@ -280,6 +318,16 @@
   #fill-btn {
     position: absolute;
     top: 200px;
+    left: 10px;
+    background-color: gray;
+    width: 75px;
+    height: 25px;
+    color: white;
+  }
+
+  #undo-btn {
+    position: absolute;
+    top: 250px;
     left: 10px;
     background-color: gray;
     width: 75px;
