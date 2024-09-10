@@ -14,8 +14,8 @@
   let erase: boolean = false;
   let fillMode: boolean = false;
   
-  let history: string[] = [];  // Array to store canvas states
-  let undoEnabled: boolean = false;  // Disable undo button if no history
+  let history: string[] = [];
+  let undoEnabled: boolean = false;
 
   function toggleErase(): void {
     erase = !erase;
@@ -34,15 +34,15 @@
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
     saveCanvasToLocalStorage();
     localStorage.removeItem("canvasData");
-    history = [];  // Clear history when canvas is cleared
-    undoEnabled = false;  // Disable undo when no history exists
+    history = [];
+    undoEnabled = false;
   }
 
   function startDrawing(event: MouseEvent): void {
     if (!fillMode) {
-      saveHistory();  // Save canvas state before any drawing happens
+      saveHistory();
       isDrawing = true;
-      [lastX, lastY] = [event.clientX, event.clientY];
+      [lastX, lastY] = [event.clientX - 5, event.clientY - 5];
     }
   }
 
@@ -60,9 +60,9 @@
 
     ctx.beginPath();
     ctx.moveTo(lastX, lastY);
-    ctx.lineTo(event.clientX, event.clientY);
+    ctx.lineTo(event.clientX - 5, event.clientY - 5);
     ctx.stroke();
-    [lastX, lastY] = [event.clientX, event.clientY];
+    [lastX, lastY] = [event.clientX - 5, event.clientY - 5];
 
     saveCanvasToLocalStorage();
   }
@@ -109,24 +109,23 @@
   function saveHistory(): void {
     if (canvas && ctx) {
       const canvasData = canvas.toDataURL();
-      history.push(canvasData);  // Save the current canvas state
-      undoEnabled = true;  // Enable the undo button
+      history.push(canvasData);
+      undoEnabled = true;
     }
   }
 
   function undo(): void {
     if (history.length === 0 || !ctx) return;
 
-    // Remove the latest state from history
     const previousState = history.pop();
-    undoEnabled = history.length > 0;  // Disable undo if no more history
+    undoEnabled = history.length > 0;
 
     if (previousState) {
       const image = new Image();
       image.src = previousState;
       image.onload = () => {
         ctx?.clearRect(0, 0, canvas.width, canvas.height);
-        ctx?.drawImage(image, 0, 0);  // Restore the previous canvas state
+        ctx?.drawImage(image, 0, 0);
         saveCanvasToLocalStorage();
       };
     }
@@ -134,7 +133,7 @@
 
   function fill(event: MouseEvent): void {
     if (!ctx || !canvas || !fillMode) return;
-    saveHistory();  // Save history before fill action
+    saveHistory();
 
     const fillColor = hexToRgb(color);
     const [startX, startY] = [event.clientX, event.clientY];
@@ -149,7 +148,6 @@
     }
   }
 
-  // Helper functions for fill logic...
   function floodFill(x: number, y: number, fillColor: number[], targetColor: number[], imageData: ImageData): void {
     const stack = [[x, y]];
     const width = imageData.width;
@@ -180,7 +178,7 @@
     data[index] = color[0];
     data[index + 1] = color[1];
     data[index + 2] = color[2];
-    data[index + 3] = 255; // Full opacity
+    data[index + 3] = 255;
   }
 
   function colorsMatch(a: number[], b: number[]): boolean {
